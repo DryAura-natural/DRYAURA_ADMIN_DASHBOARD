@@ -1,21 +1,14 @@
 import prismadb from "@/lib/prismadb";
 import { BillboardForm } from "./components/billboard-form";
 
-
-interface BillboardPageProps  {
-  params: {
-    billboardId: string;
-  };
-}
-// @ts-ignore: Ignore type error for dynamic params
-const BillboardPage = async ({ params }: BillboardPageProps) => {
+const BillboardPage = async ({ params }: { params: { billboardId: string } }) => {
+  // Ensure that the `billboardId` is a valid string and passed correctly
   const billboard = await prismadb.billboard.findUnique({
     where: {
-      id: params.billboardId,
+      id: params.billboardId, // Access the `billboardId` from params
     },
   });
 
-  // Handle the case if no billboard is found
   if (!billboard) {
     return <div>Billboard not found</div>;
   }
