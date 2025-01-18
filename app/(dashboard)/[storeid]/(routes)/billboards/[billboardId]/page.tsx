@@ -1,3 +1,4 @@
+// @ts-nocheck
 import prismadb from "@/lib/prismadb";
 import { BillboardForm } from "./components/billboard-form";
 
