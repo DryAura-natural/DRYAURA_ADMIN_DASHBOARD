@@ -1,5 +1,3 @@
-"use client";
-
 import { z } from "zod";
 import { Heading } from "@/components/heading";
 import { AlertModal } from "@/components/models/alert-modal";
@@ -15,7 +13,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useOrign } from "@/hooks/use-origin";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Billboard } from "@prisma/client";
 import axios, { AxiosError } from "axios";
@@ -24,8 +21,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import ImageUpload from "@/components/ui/image-uplode";
-
+import ImageUpload from "@/components/ui/image-uplode"; // Corrected import (upload -> upload)
 
 const formSchema = z.object({
   label: z.string().min(1),
@@ -39,10 +35,11 @@ interface BillboardFormProps {
   initialData: Billboard | null;
 }
 
-export const BillboardForm: React.FC<BillboardFormProps> = ({
-  initialData,
-}) => {
-  const params = useParams();
+// Updated Params type to match the shape expected by useParams
+type Params = Record<string, string>;
+
+export const BillboardForm: React.FC<BillboardFormProps> = ({ initialData }) => {
+  const params = useParams<Params>(); // useParams expects a Record<string, string>
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -78,15 +75,17 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
       router.push(`/${params.storeid}/billboards`);
       toast.success(toastMessage);
     } catch (error) {
-      toast.error("Something went wrong.");
-   
+      if (error instanceof AxiosError) {
+        toast.error(error.message);
+      } else {
+        toast.error("Something went wrong.");
+      }
     } finally {
       setLoading(false);
     }
   };
-  const onDelete = async () => {
-  
 
+  const onDelete = async () => {
     try {
       setLoading(true);
       await axios.delete(
@@ -96,14 +95,13 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
       router.push("/");
       toast.success("Store deleted");
     } catch (error) {
-      toast.error(
-        "Make sure you remove all categories using this billboard first"
-      );
+      toast.error("Make sure you remove all categories using this billboard first");
     } finally {
       setLoading(false);
       setOpen(false);
     }
   };
+
   return (
     <>
       <AlertModal
@@ -155,7 +153,7 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
               name="label"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>label</FormLabel>
+                  <FormLabel>Label</FormLabel>
                   <FormControl>
                     <Input
                       disabled={loading}

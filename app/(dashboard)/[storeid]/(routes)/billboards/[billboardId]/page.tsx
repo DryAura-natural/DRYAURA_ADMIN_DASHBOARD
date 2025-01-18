@@ -36,4 +36,5 @@ const BillboardPage = ({ billboard }: { billboard: any }) => {
    );
 };
 
+
 export default BillboardPage;
