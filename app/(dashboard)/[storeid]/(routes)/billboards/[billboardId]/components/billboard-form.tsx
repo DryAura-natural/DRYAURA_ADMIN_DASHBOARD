@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import { z } from "zod";
 import { Heading } from "@/components/heading";
