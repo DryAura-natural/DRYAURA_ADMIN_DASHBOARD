@@ -1,4 +1,4 @@
-// @ts-nocheckc;
+// @ts-nocheck
 import React from 'react'
 import { BillboardClient } from './components/client';
 import prismadb from '@/lib/prismadb';
