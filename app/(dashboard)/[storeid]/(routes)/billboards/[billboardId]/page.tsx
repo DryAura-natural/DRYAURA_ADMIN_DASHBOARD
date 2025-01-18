@@ -1,14 +1,13 @@
-import { PrismaClient, Billboard } from "@prisma/client";
+import prismadb from "@/lib/prismadb";
 import { BillboardForm } from "./components/billboard-form";
 
-const prismadb = new PrismaClient();
 
-interface BillboardPageProps {
+interface BillboardPageProps  {
   params: {
     billboardId: string;
   };
 }
-
+// @ts-ignore: Ignore type error for dynamic params
 const BillboardPage = async ({ params }: BillboardPageProps) => {
   const billboard = await prismadb.billboard.findUnique({
     where: {
@@ -16,7 +15,7 @@ const BillboardPage = async ({ params }: BillboardPageProps) => {
     },
   });
 
-  // Null check for the billboard
+  // Handle the case if no billboard is found
   if (!billboard) {
     return <div>Billboard not found</div>;
   }
@@ -24,7 +23,6 @@ const BillboardPage = async ({ params }: BillboardPageProps) => {
   return (
     <div className="flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        {/* Make sure BillboardForm expects a `billboard` type as initialData */}
         <BillboardForm initialData={billboard} />
       </div>
     </div>
