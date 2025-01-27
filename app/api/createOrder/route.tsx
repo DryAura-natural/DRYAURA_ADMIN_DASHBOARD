@@ -8,7 +8,7 @@ const razorpay = new Razorpay({
 });
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001", // Allow your frontend
+  "Access-Control-Allow-Origin": "https://dryaura.vercel.app", // Allow your frontend
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

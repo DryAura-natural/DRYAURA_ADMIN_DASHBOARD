@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 // Set CORS headers for your backend
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001", // Frontend's URL
+  "Access-Control-Allow-Origin": "*", // Frontend's URL
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
