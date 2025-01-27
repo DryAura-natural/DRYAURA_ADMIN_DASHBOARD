@@ -1,7 +1,7 @@
 import Razorpay from "razorpay";
+import { v4 as uuidv4 } from "uuid";
 import { NextRequest, NextResponse } from "next/server";
 
-// Initialize Razorpay instance with your key and secret
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
@@ -13,16 +13,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Handle OPTIONS request for preflight requests
-export async function OPTIONS(req: NextRequest, res: NextResponse) {
+export async function OPTIONS(req: NextRequest) {
   return NextResponse.json({}, { status: 200, headers: corsHeaders });
 }
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
   try {
     const { amount } = await req.json();
-    
-    // Validate the amount
+
     if (typeof amount !== "number" || amount <= 0) {
       return NextResponse.json(
         { error: "Invalid amount provided." },
@@ -31,19 +29,19 @@ export async function POST(req: NextRequest, res: NextResponse) {
     }
 
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Razorpay expects the amount in paise
+      amount: amount * 100, // Amount in paise
       currency: "INR",
-      receipt: "receipt_001" + Math.random().toString(36).substring(7),
+      receipt: `receipt_${uuidv4()}`, // Generate unique receipt
     });
 
     return NextResponse.json(
       { orderId: order.id },
       { status: 200, headers: corsHeaders }
     );
-  } catch (error) {
-    console.error("Error creating order:", error); // Log detailed error for debugging
+  } catch (error: any) {
+    console.error("Error creating order:", error);
     return NextResponse.json(
-      { error: error || "Error creating order" },
+      { error: error.message || "Error creating order" },
       { status: 500, headers: corsHeaders }
     );
   }
