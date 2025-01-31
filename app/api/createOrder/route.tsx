@@ -8,7 +8,7 @@ const razorpay = new Razorpay({
 });
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://darsattire.in/", // Allow your frontend
+  "Access-Control-Allow-Origin": "https://darsattire.in", // Allow your frontend
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const order = await razorpay.orders.create({
       amount: amount * 100, // Amount in paise
       currency: "INR",
-      receipt: `receipt_${uuidv4()}`, // Generate unique receipt
+      receipt: `rcpt_${Date.now()}`, // Generate unique receipt
     });
 
     return NextResponse.json(

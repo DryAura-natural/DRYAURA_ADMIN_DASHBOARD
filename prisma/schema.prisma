@@ -20,16 +20,32 @@ model User {
   updatedAt   DateTime  @updatedAt
 }
 
+// model Customer {
+//   id          String    @id @default(uuid())
+//   firstName   String
+//   lastName    String
+//   email       String    @unique
+//   phone       String?   // Optional
+//   address     String?   // Optional
+//   orders      Order[]   @relation("CustomerToOrder") // One-to-many relationship
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+// }
 model Customer {
-  id          String    @id @default(uuid())
-  firstName   String
-  lastName    String
-  email       String    @unique
-  phone       String?   // Optional
-  address     String?   // Optional
-  orders      Order[]   @relation("CustomerToOrder") // One-to-many relationship
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String    @id @default(uuid()) // Unique ID for the customer
+  userId      String    @unique// Clerk user ID
+  firstName   String    // First name of the customer
+  lastName    String    // Last name of the customer
+  email       String    @unique // Unique email address
+  phone       String?   // Optional phone number
+  streetAddress String? // Optional street address
+  city        String?   // Optional city
+  state       String?   // Optional state
+  postalCode  String?   // Optional postal code
+  country     String?   // Optional country
+  orders      Order[]   @relation("CustomerToOrder") // One-to-many relationship with orders
+  createdAt   DateTime  @default(now()) // Timestamp when the customer was created
+  updatedAt   DateTime  @updatedAt // Timestamp when the customer was last updated
 }
 
 model Store {
