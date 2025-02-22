@@ -1,60 +1,74 @@
-import Razorpay from "razorpay";
 import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 
-// Set CORS headers for your backend
+const prisma = new PrismaClient();
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // Frontend's URL
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Origin": "*", // Adjust this in production
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Initialize Razorpay instance with your key and secret
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
-// Handle OPTIONS request for preflight checks
 export async function OPTIONS(req: NextRequest) {
-  return NextResponse.json({}, {
-    status: 200,
-    headers: corsHeaders,
-  });
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-// Handle POST request for payment verification
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, razorpayPaymentId, razorpaySignature } = await req.json();
+    const body = await req.json();
+    console.log("📥 Request body:", body);
 
-    const generatedSignature = (razorpayOrderId: string, razorpayPaymentId: string) => {
-      const keySecret = process.env.RAZORPAY_KEY_SECRET!;
-      const sig = crypto
-        .createHmac("sha256", keySecret)
-        .update(razorpayOrderId + "|" + razorpayPaymentId)
-        .digest("hex");
-      return sig;
-    };
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
-    const signature = generatedSignature(orderId, razorpayPaymentId);
-    if (signature !== razorpaySignature) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json(
+        { message: "Missing required fields", isOk: false },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return NextResponse.json(
+        { message: "Razorpay secret key is missing", isOk: false },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    // 🔹 Generate expected signature
+    const generatedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    // 🔹 Compare signatures
+    const isOk = generatedSignature === razorpay_signature;
+
+    if (!isOk) {
       return NextResponse.json(
         { message: "Payment verification failed", isOk: false },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Success: Payment is verified
+    // 🔹 Update the order in the database
+    const updatedOrder = await prisma.order.updateMany({
+      where: { razorpayOrderId: razorpay_order_id }, // Ensure this field exists in your DB
+      data: { isPaid: isOk,orderStatus:"PROCESSING" },
+    });
+
     return NextResponse.json(
-      { message: "Payment verified successfully", isOk: true },
+      { message: "Payment verified successfully", isOk: true, updatedOrder },
       { status: 200, headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Payment verification error:", error);
+    console.error("❌ Payment verification error:", error);
     return NextResponse.json(
-      { message: "Payment verification failed", isOk: false },
+      { message: "Internal Server Error", isOk: false },
       { status: 500, headers: corsHeaders }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

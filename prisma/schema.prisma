@@ -31,11 +31,20 @@ model User {
 //   createdAt   DateTime  @default(now())
 //   updatedAt   DateTime  @updatedAt
 // }
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
 model Customer {
   id          String    @id @default(uuid()) // Unique ID for the customer
   userId      String    @unique// Clerk user ID
-  firstName   String    // First name of the customer
-  lastName    String    // Last name of the customer
+  name        String
+  // firstName   String    // First name of the customer
+  // lastName    String    // Last name of the customer
   email       String    @unique // Unique email address
   phone       String?   // Optional phone number
   streetAddress String? // Optional street address
@@ -137,6 +146,7 @@ model Product {
   colorId     String?  // Make colorId optional
   color       Color?   @relation(fields: [colorId], references: [id]) // Make color optional
   images      Image[]
+  productBanner  ProductBanneriamge[]
   orderItems  OrderItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -155,7 +165,15 @@ model Image {
   url         String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  @@index([productId])
+}
+model ProductBanneriamge {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@index([productId])
 }
 
@@ -163,13 +181,16 @@ model Order {
   id          String    @id @default(uuid())
   storeId     String
   store       Store     @relation("StoreToOrder", fields: [storeId], references: [id])
-  customerId  String
-  customer    Customer  @relation("CustomerToOrder", fields: [customerId], references: [id]) // Many-to-one relationship
+  customerId  String?
+  customer    Customer?  @relation("CustomerToOrder", fields: [customerId], references: [id])
   orderItems  OrderItem[]
   isPaid      Boolean   @default(false)
-  totalAmount Decimal   @default(0.0) // Total amount for the order
-  phone       String?   // Optional, redundant if stored in Customer
-  address     String?   // Optional, redundant if stored in Customer
+  // paymentId   String?  // Nullable, stores Razorpay payment ID
+  razorpayOrderId String?  // Add this field if missing
+  totalAmount Decimal   @default(0.0)
+  phone       String?
+  address     String?
+  orderStatus OrderStatus @default(PENDING) // Add order status field
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -177,10 +198,16 @@ model Order {
   @@index([customerId])
 }
 
+
+
 model OrderItem {
   id          String   @id @default(uuid())
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id])
   productId   String
   product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
 }
+//npx prisma generate
+// npx prisma db push 
+// npx prisma studio 
