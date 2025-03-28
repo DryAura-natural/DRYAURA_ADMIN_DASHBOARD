@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useOrign } from "@/hooks/use-origin";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Billboard } from "@prisma/client";
+import { Billboard, BillboardImage } from "@prisma/client";
 import axios, { AxiosError } from "axios";
 import { Trash } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -26,17 +26,16 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import ImageUpload from "@/components/ui/image-uplode";
 
-
 const formSchema = z.object({
   label: z.string().min(1),
   description: z.string().min(1),
-  imageUrl: z.string().min(1),
+  images: z.array(z.string().min(1)).optional(),
 });
 
 type BillboardFormValue = z.infer<typeof formSchema>;
 
 interface BillboardFormProps {
-  initialData: Billboard | null;
+  initialData: (Billboard & { images: BillboardImage[] }) | null;
 }
 
 export const BillboardForm: React.FC<BillboardFormProps> = ({
@@ -55,11 +54,17 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
 
   const form = useForm<BillboardFormValue>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      label: "",
-      description: "",
-      imageUrl: "",
-    },
+    defaultValues: initialData 
+      ? {
+          label: initialData.label,
+          description: initialData.description,
+          images: initialData.images ? initialData.images.map((img: any) => img.url) : [],
+        }
+      : {
+          label: "",
+          description: "",
+          images: [],
+        },
   });
 
   const onSubmit = async (data: BillboardFormValue) => {
@@ -79,6 +84,8 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
       toast.success(toastMessage);
     } catch (error) {
       toast.error("Something went wrong.");
+      console.log("this is error ", error);
+      
    
     } finally {
       setLoading(false);
@@ -133,16 +140,23 @@ export const BillboardForm: React.FC<BillboardFormProps> = ({
         >
           <FormField
             control={form.control}
-            name="imageUrl"
+            name="images"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Background Image</FormLabel>
+                <FormLabel>Billboard Images</FormLabel>
                 <FormControl>
                   <ImageUpload
-                    value={field.value ? [field.value] : []}
+                    folderId="67a96d700017b622e519"
+                    value={field.value ?? []}
                     disabled={loading}
-                    onChange={(url) => field.onChange(url)}
-                    onRemove={() => field.onChange("")}
+                    onChange={(url) => 
+                      field.onChange([...((field.value || [])), url])
+                    }
+                    onRemove={(url) => 
+                      field.onChange(
+                        (field.value || []).filter((current) => current !== url)
+                      )
+                    }
                   />
                 </FormControl>
                 <FormMessage />

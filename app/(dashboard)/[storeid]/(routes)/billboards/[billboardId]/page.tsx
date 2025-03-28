@@ -7,6 +7,9 @@ const BillboardPage = async ({ params }: any) => {
     where: {
       id: params.billboardId,
     },
+    include: {
+      images: true
+    }
   });
 
   return (

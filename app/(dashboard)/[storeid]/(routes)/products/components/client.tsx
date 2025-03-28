@@ -2,7 +2,6 @@
 
 import { Heading } from "@/components/heading";
 import { Button } from "@/components/ui/button";
-import { Billboard } from "@prisma/client";
 import { Plus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { ProductsColumn, columns } from "./columns";
@@ -17,12 +16,13 @@ interface ProductsClientProps {
 export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
   const router = useRouter();
   const params = useParams();
+
   return (
-    <>
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Heading
           title={`Products (${data.length})`}
-          description="Manage products for your store"
+          description={`Manage ${data.length} products and their variants`}
         />
         <Button
           onClick={() => router.push(`/${params.storeid}/products/new`)}
@@ -31,11 +31,25 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
           Add New
         </Button>
       </div>
+      
       <Separator />
-      <DataTable searchKey="name" columns={columns} data={data} />
-      <Heading title="API" description="API calls for Products" />
+      
+      <DataTable 
+        searchKey="name" 
+        columns={columns} 
+        data={data}
+        // Remove filterOptions and use column-based filtering instead
+      />
+      
+      <Heading 
+        title="API Endpoints" 
+        description="Access product data via API" 
+      />
       <Separator />
-      <ApiList  entityName="products" entityIdName="productID"/>
-    </>
+      <ApiList  
+        entityName="products" 
+        entityIdName="id"
+      />
+    </div>
   );
 };

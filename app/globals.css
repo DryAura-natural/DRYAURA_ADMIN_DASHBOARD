@@ -72,3 +72,16 @@ html,body,:root{
     @apply bg-background text-foreground;
   }
 }
+
+/* For multi-select tags */
+[cmdk-multiple-selected-items] {
+  @apply flex flex-wrap gap-1;
+}
+
+[cmdk-multiple-selected-item] {
+  @apply bg-accent text-accent-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1;
+}
+
+[cmdk-multiple-remove] {
+  @apply hover:text-destructive;
+}

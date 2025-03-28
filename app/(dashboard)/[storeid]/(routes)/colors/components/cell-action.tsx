@@ -1,20 +1,21 @@
 "use client";
-
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import { ColorColumn } from "./columns";
 import { Button } from "@/components/ui/button";
 import { Copy, Edit, MoreHorizontal, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import axios from "axios";
 import { AlertModal } from "@/components/models/alert-modal";
+import { useState } from "react";
 
 interface CellActionProps {
   data: ColorColumn;
@@ -25,13 +26,13 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const params = useParams();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+
   const onCopy = (id: string) => {
     navigator.clipboard.writeText(id);
     toast.success("Color id copied to the clipboard");
   };
-  const onDelete = async () => {
-    console.log("clicked");
 
+  const onDelete = async () => {
     try {
       setLoading(true);
       await axios.delete(`/api/${params.storeid}/colors/${data.id}`);
@@ -47,7 +48,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   };
 
   return (
-    <div>
+    <>
       <AlertModal
         isOpen={open}
         loading={loading}
@@ -56,29 +57,49 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+          >
             <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Action</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => onCopy(data.id)}>
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem 
+            onSelect={(event: Event) => {
+              event.preventDefault();
+              onCopy(data.id);
+            }}
+          >
             <Copy className="h-4 w-4 mr-2" />
             Copy Id
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${params.storeid}/colors/${data.id}`)}
+          <DropdownMenuItem 
+            onSelect={(event: Event) => {
+              event.preventDefault();
+              router.push(`/${params.storeid}/colors/${data.id}`);
+            }}
           >
             <Edit className="h-4 w-4 mr-2" />
             Update
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpen(true)}>
+          <DropdownMenuItem 
+            onSelect={(event: Event) => {
+              event.preventDefault();
+              setOpen(true);
+            }}
+          >
             <Trash className="h-4 w-4 mr-2" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </>
   );
 };

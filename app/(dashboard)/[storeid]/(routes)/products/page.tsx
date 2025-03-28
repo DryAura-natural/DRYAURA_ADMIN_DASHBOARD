@@ -11,36 +11,103 @@ const ProductsPage = async ({ params }: { params: { storeid: string } }) => {
       storeId: params.storeid,
     },
     include: {
-      category: true,
-      size: true,
-      color: true,
+      categories: {
+        include: {
+          category: true
+        }
+      },
+      variants: {
+        include: {
+          size: true,
+          color: true
+        }
+      },
+      badges: {
+        include: {
+          badge: true
+        }
+      }
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  const formattedProducts: ProductsColumn[] = products.map((item) => ({
-    id: item.id,
-    name: item.name,
-    isFeatured: item.isFeatured,
-    isArchived: item.isArchived,
-    price: formatter.format(item.price.toNumber()),
-    category:item.category.name,
-    size:item.size.name,
-    color: item.color ? item.color.value : "Unknown", // Fallback value for missing color
-    createdAt: isValid(new Date(item.createdAt))
-      ? format(new Date(item.createdAt), "MMM do yyyy")
-      : "Unknown", // Fallback value for invalid dates
-    subLabel: item.subLabel || "No subLabel",
-    description: item.description ? item.description.split(" ").slice(0, 10).join(" ") + (item.description.split(" ").length > 10 ? "..." : "") : "No description available",
-  }));
+  const formattedProducts: ProductsColumn[] = products.map((product) => {
+    // Get all unique sizes from variants
+    const sizes = Array.from(new Set(
+      product.variants.map(variant => variant.size.name)
+    ));
+
+    // Get all unique colors from variants that have colors
+    const colors = Array.from(new Set(
+      product.variants
+        .filter(variant => variant.color)
+        .map(variant => ({ value: variant.color!.value }))
+    ));
+
+    // Get price range from variants
+    const variantPrices = product.variants.map(v => v.price.toNumber());
+    const priceRange = variantPrices.length > 0 
+      ? `${Math.min(...variantPrices)} - ${Math.max(...variantPrices)}`
+      : "N/A";
+
+    // Get MRP range from variants
+    const variantMrps = product.variants.map(v => v.mrp.toNumber());
+    const mrpRange = variantMrps.length > 0
+      ? `${Math.min(...variantMrps)} - ${Math.max(...variantMrps)}`
+      : "N/A";
+
+    // Handle benefits and specifications
+    const benefits = product.benefitsArray || 
+      (typeof product.benefits === 'string' 
+        ? [product.benefits] 
+        : Array.isArray(product.benefits) 
+          ? product.benefits 
+          : product.benefits 
+            ? Object.values(product.benefits).flat() 
+            : []);
+
+    const specifications = product.specificationsArray || 
+      (typeof product.specifications === 'string'
+        ? [product.specifications]
+        : Array.isArray(product.specifications)
+          ? product.specifications
+          : product.specifications
+            ? Object.values(product.specifications).flat()
+            : []);
+
+    return {
+      id: product.id,
+      name: product.name,
+      price: priceRange,
+      mrp: mrpRange,
+      sizes,
+      categories: product.categories.map(c => c.category.name),
+      badges: product.badges.map(b => b.badge.label),
+      colors,
+      isFeatured: product.isFeatured,
+      isArchived: product.isArchived,
+      createdAt: isValid(product.createdAt)
+        ? format(product.createdAt, "MMM do yyyy")
+        : "Invalid date",
+      subLabel: product.subLabel || undefined,
+      description: product.description 
+        ? `${product.description.split(" ").slice(0, 10).join(" ")}${product.description.split(" ").length > 10 ? "..." : ""}`
+        : undefined,
+      variantsCount: product.variants.length,
+      benefits,
+      specifications,
+    };
+  });
+
   return (
     <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex-1 space-y-4 p-8   pt-6">
         <ProductsClient data={formattedProducts} />
       </div>
     </div>
   );
 };
+
 export default ProductsPage;

@@ -36,6 +36,7 @@ export default function RootLayout({
             <Toaster />
           <ModelProvider/>
           {children}
+          
         </body>
       </html>
     </ClerkProvider>

@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import React, { useState } from "react";
-import { Home, Tags, Ruler, Palette, Box, ShoppingCart, Settings, Presentation } from "lucide-react"; // Import Lucide icons
+import { Home, Tags, Ruler, Palette, Box, ShoppingCart, Settings, Presentation, Badge, PercentDiamondIcon } from "lucide-react"; // Import Lucide icons
+import BadgePage from "@/app/(dashboard)/[storeid]/(routes)/badges/page";
 
 export function MainNav({
   className,
@@ -46,10 +47,22 @@ export function MainNav({
       active: pathname === `/${params.storeid}/colors`,
     },
     {
+      href: `/${params.storeid}/badges`,
+      label: "Badges",
+      icon: <Badge className="mr-2 h-5 w-5" />,
+      active: pathname === `/${params.storeid}/badges`,
+    },
+    {
       href: `/${params.storeid}/products`,
       label: "Products",
       icon: <Box className="mr-2 h-5 w-5" />,
       active: pathname === `/${params.storeid}/products`,
+    },
+    {
+      href: `/${params.storeid}/promotions`,
+      label: "PromoCode",
+      icon: <PercentDiamondIcon className="mr-2 h-5 w-5 text-green-900" />,
+      active: pathname === `/${params.storeid}/promotions`,
     },
     {
       href: `/${params.storeid}/orders`,

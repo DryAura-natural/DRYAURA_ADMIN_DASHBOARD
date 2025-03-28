@@ -17,6 +17,9 @@ export async function GET(
           where: {
             id: params.billboardId,
           },
+          include: {
+            images: true
+          }
         });
         
         return NextResponse.json(billboard);
@@ -32,7 +35,8 @@ export async function PATCH(
   try {
     const { userId } = await auth();
     const body = await req.json();
-    const { label,imageUrl,description } = body;
+    const { label, images, description } = body;
+
     if (!userId) {
       return new NextResponse("Unauthenticated", { status: 401 });
     }
@@ -44,13 +48,13 @@ export async function PATCH(
       return new NextResponse("description is required", { status: 400 });
     }
 
-    if (!imageUrl) {
-      return new NextResponse("Iamge URL is required", { status: 400 });
+    if (!images || images.length === 0) {
+      return new NextResponse("At least one image is required", { status: 400 });
     }
     if (!params.billboardId) {
       return new NextResponse("Billboard id is required", { status: 400 });
     }
-    const  storeByUserId = await prismadb.store.findFirst({
+    const storeByUserId = await prismadb.store.findFirst({
       where:{
             id:params.storeid,
             userId
@@ -59,15 +63,28 @@ export async function PATCH(
     if (!storeByUserId){
       return new NextResponse("Unauthorized", { status: 403 });
     }
-    const billboard = await prismadb.billboard.updateMany({
+    
+    // First, delete existing images
+    await prismadb.billboardImage.deleteMany({
+      where: {
+        billboardId: params.billboardId
+      }
+    });
+
+    const billboard = await prismadb.billboard.update({
       where: {
         id: params.billboardId,
       },
       data: {
         label,
         description,
-        imageUrl,
+        images: {
+          create: images.map((url: string) => ({ url }))
+        }
       },
+      include: {
+        images: true
+      }
     });
     return NextResponse.json(billboard);
   } catch (error) {
@@ -98,6 +115,13 @@ export async function DELETE(
     if (!storeByUserId){
       return new NextResponse("Unauthorized", { status: 403 });
     }
+    // First, delete associated billboard images
+    await prismadb.billboardImage.deleteMany({
+      where: {
+        billboardId: params.billboardId
+      }
+    });
+
     const billboard = await prismadb.billboard.deleteMany({
       where: {
         id: params.billboardId,

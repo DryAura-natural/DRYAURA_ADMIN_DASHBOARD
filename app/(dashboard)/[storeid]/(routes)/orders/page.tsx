@@ -1,90 +1,64 @@
-import React from "react";
-import { OrderClient } from "./components/client";
+import { format } from "date-fns";
 import prismadb from "@/lib/prismadb";
-import { OrderColumn } from "./components/order-types";
-import { format, isValid } from "date-fns";
-import { formatter } from "@/lib/utils";
+import { OrderClient } from "./components/client";
+import { OrderColumn, createOrderColumn } from "./components/order-types";
 
 const OrdersPage = async ({ params }: { params: { storeid: string } }) => {
   const orders = await prismadb.order.findMany({
-    where: { storeId: params.storeid },
+    where: {
+      storeId: params.storeid
+    },
     include: {
       orderItems: {
         include: {
-          product: {
+          variant: {
             include: {
+              product: true,
               size: true,
-              color: true,
             },
           },
         },
       },
       customer: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
-  // ✅ Correctly calculating quantity
-  const formattedOrders: OrderColumn[] = orders.map((item) => {
-    const totalQuantity = item.orderItems.reduce(
-      (total, orderItem) => total + orderItem.quantity,
-      0
-    ); // ✅ Correctly summing up the quantity of all order items
-
-    orders.forEach((order) => {
-      console.log("Customer Name:", order.customer?.name);
-    });
-    
-    return {
-      id: item.id,
-      // customerName: item.customer
-      //   ? `${item.customer.name}`
-      //   : "Guest use",
-      name: item.customer?.name || "Guest",
-      phone: item.phone || item.customer?.phone || "N/A",
-      address:
-        item.address ||
-        (item.customer
-          ? [
-              item.customer.streetAddress,
-              item.customer.city,
-              item.customer.state,
-              item.customer.postalCode,
-              item.customer.country,
-            ]
-              .filter(Boolean)
-              .join(", ")
-          : "N/A"),
-      products: item.orderItems
-        .map((orderItem) => {
-          const product = orderItem.product;
-          return `${product.name} (Qty: ${orderItem.quantity}, ${
-            product.size?.value || "N/A"
-          }, ${product.color?.name || "No color"})`;
-        })
-        .join(", "),
-      totalPrice: formatter.format(
-        item.orderItems.reduce((total, orderItem) => {
-          return total + Number(orderItem.product.price) * orderItem.quantity;
-        }, 0)
-      ),
-      isPaid: item.isPaid,
-      orderStatus: item.orderStatus,
-      quantity: totalQuantity, // ✅ Ensure quantity is assigned and passed to frontend
-      createdAt: isValid(new Date(item.createdAt))
-        ? format(new Date(item.createdAt), "MMM do yyyy")
-        : "Unknown",
-      updatedAt: isValid(new Date(item.updatedAt))
-        ? format(new Date(item.updatedAt), "MMM do yyyy")
-        : "Unknown",
-    };
-  });
+  const formattedOrders: OrderColumn[] = orders.map((order) => 
+    createOrderColumn({
+      id: order.id,
+      customer: {
+        name: order.customer?.name || order.name || "Guest",
+        id: order.customerId || '',
+        email: order.customer?.email || order.email || '',
+        phone: order.customer?.phone || order.phone || "N/A",
+        address: order.customer?.streetAddress || order.address || "N/A",
+        alternativePhone: order.customer?.alternatePhone || "N/A"
+      
+      },
+      products: order.orderItems.map((item) => ({
+        id: item.variantId,
+        name: item.variant.product.name,
+        size: item.variant.size?.value || 'N/A',
+        quantity: item.quantity,
+        unitPrice: item.variant.price.toNumber(),
+        totalPrice: item.totalPrice.toNumber(),
+      })),
+      totalPrice: order.totalAmount.toNumber(),
+      status: order.orderStatus || 'PENDING',
+      isPaid: order.isPaid || false,
+      createdAt: format(order.createdAt, "yyyy-MM-dd'T'HH:mm:ssxxx"),
+      updatedAt: format(order.updatedAt, "yyyy-MM-dd'T'HH:mm:ssxxx"),
+      storeId: order.storeId
+    })
+  );
 
   return (
     <div className="flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        <OrderClient data={formattedOrders} />{" "}
-        {/* ✅ Ensure frontend receives quantity */}
+        <OrderClient data={formattedOrders} />
       </div>
     </div>
   );

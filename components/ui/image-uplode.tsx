@@ -16,14 +16,15 @@ interface ImageUploadProps {
   disabled?: boolean;
   onChange: (url: string) => void;
   onRemove: (url: string) => void;
+  folderId?: string;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({ value, disabled, onChange, onRemove }) => {
+const ImageUpload: React.FC<ImageUploadProps> = ({ value, disabled, onChange, onRemove,folderId="67a9cbfa001285dc191f" }) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    console.log("Updated Images:", value);
+    // console.log("Updated Images:", value);
   }, [value]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,8 +36,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, disabled, onChange, on
 
     setUploading(true);
     try {
-      const response = await storage.createFile("67a96d700017b622e519", ID.unique(), file);
-      const uploadedUrl = `https://cloud.appwrite.io/v1/storage/buckets/67a96d700017b622e519/files/${response.$id}/view?project=67a96cd2001e32766970`;
+      const response = await storage.createFile(folderId, ID.unique(), file);
+      const uploadedUrl = `https://cloud.appwrite.io/v1/storage/buckets/${folderId}/files/${response.$id}/view?project=67a96cd2001e32766970`;
 
       onChange(uploadedUrl); // Update with uploaded URL
     } catch (error) {
