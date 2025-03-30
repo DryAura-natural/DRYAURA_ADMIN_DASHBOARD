@@ -2,31 +2,85 @@ import prismadb from "@/lib/prismadb";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export async function GET(
-      req: Request,
-      { params }: { params: {billboardId: string } }
-    ) {
-      try {
+// export async function GET(
+//       req: Request,
+//       { params }: { params: {billboardId: string } }
+//     ) {
+//       try {
         
-        if (!params.billboardId) {
-          return new NextResponse("Billboard id is required", { status: 400 });
-        }
+//         if (!params.billboardId) {
+//           return new NextResponse("Billboard id is required", { status: 400 });
+//         }
      
   
-        const billboard = await prismadb.billboard.findUnique({
-          where: {
-            id: params.billboardId,
-          },
-          include: {
-            images: true
-          }
-        });
+//         const billboard = await prismadb.billboard.findUnique({
+//           where: {
+//             id: params.billboardId,
+//           },
+//           include: {
+//             images: true
+//           }
+//         });
         
-        return NextResponse.json(billboard);
-      } catch (error) {
-        console.log("[BILLBOARDS_GET]", error);
-        return new NextResponse("Internal error", { status: 500 });
+//         return NextResponse.json(billboard);
+//       } catch (error) {
+//         console.log("[BILLBOARDS_GET]", error);
+//         return new NextResponse("Internal error", { status: 500 });
+//       }
+// }
+export async function GET(
+  req: Request,
+  { params }: { params: {billboardId: string } }
+) {
+  try {
+    // Validate billboardId
+    if (!params.billboardId) {
+      return new NextResponse("Billboard id is required", { status: 400 });
+    }
+
+    // Add CORS headers
+    const headers = {
+      'Access-Control-Allow-Origin': '*', // Or specify your exact origin
+      'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    const billboard = await prismadb.billboard.findUnique({
+      where: {
+        id: params.billboardId,
+      },
+      include: {
+        images: true
       }
+    });
+    
+    // Handle case when billboard is not found
+    if (!billboard) {
+      return new NextResponse("Billboard not found", { status: 404 });
+    }
+
+    // Return billboard with CORS headers
+    return NextResponse.json(billboard, { 
+      headers: new Headers(headers) 
+    });
+  } catch (error) {
+    console.error("[BILLBOARDS_GET]", error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error({
+        message: error.message,
+        stack: error.stack
+      });
+    }
+
+    return new NextResponse("Internal error", { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }
 }
 export async function PATCH(
   req: Request,

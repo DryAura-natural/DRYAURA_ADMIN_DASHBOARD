@@ -4,24 +4,33 @@ import { NextResponse } from "next/server";
 
 export async function GET(
       req: Request,
-      { params }: { params: {categoryId: string ,} }
+      { params }: { params: {storeid: string,categoryId: string ,} }
     ) {
       try {
         
         if (!params.categoryId) {
           return new NextResponse("Category id is required", { status: 400 });
         }
-        const  category = await prismadb.category.findUnique({
-          where:{
-                id:params.categoryId,
-                
-          },include:{
-            billboard:true ,
+        const category = await prismadb.category.findFirst({
+          where: {
+            OR: [
+              { id: params.categoryId },
+              { name: params.categoryId }
+            ],
+            storeId: params.storeid
           },
-         
-        })
+          include: {
+            billboard: {
+              include: {
+                images: true
+              }
+            },
+          },
+        });
    
-        
+        if (!category) {
+          return new NextResponse("Category not found", { status: 404 });
+        }
         return NextResponse.json(category);
       } catch (error) {
         console.log("[CATEGORY_GET]", error);

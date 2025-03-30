@@ -2,6 +2,7 @@ import prismadb from "@/lib/prismadb";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 
 // POST route for creating a product
 export async function POST(
@@ -431,6 +432,109 @@ export async function POST(
 }
 
 // GET route for retrieving products
+// export async function GET(
+//   req: Request,
+//   { params }: { params: { storeid: string } }
+// ) {
+//   try {
+//     const { storeid } = params;
+
+//     // Parse URL query parameters for filtering and pagination
+//     const { searchParams } = new URL(req.url);
+//     const page = parseInt(searchParams.get('page') || '1', 10);
+//     const limit = parseInt(searchParams.get('limit') || '10', 10);
+//     const search = searchParams.get('search') || '';
+//     const sortBy = searchParams.get('sortBy') || 'createdAt';
+//     const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+//     // Construct dynamic where clause for filtering
+//     const whereClause: any = { 
+//       storeId: storeid,
+//       // Optional search across multiple fields
+//       ...(search ? {
+//         OR: [
+//           { name: { contains: search, mode: 'insensitive' } },
+//           { description: { contains: search, mode: 'insensitive' } },
+//           { benefitsArray: { has: search } },
+//           { specificationsArray: { has: search } },
+//         ]
+//       } : {})
+//     };
+
+//     // Construct dynamic order by clause
+//     const orderByClause: any = { 
+//       [sortBy]: sortOrder 
+//     };
+
+//     const products = await prismadb.product.findMany({
+//       where: whereClause,
+//       include: {
+//         categories: { include: { category: true } },
+//         variants: { 
+//           include: { 
+//             size: true  // Include full size details for each variant
+//           } 
+//         },
+//         images: true,
+//         productBanner: true,
+//         badges: 
+//         { include: { badge: true } },
+//       },
+//       orderBy: orderByClause,
+//       skip: (page - 1) * limit,
+//       take: limit,
+//     });
+
+//     // Count total products for pagination
+//     const totalProducts = await prismadb.product.count({ 
+//       where: whereClause 
+//     });
+
+//     // Sanitize and transform products
+//     const sanitizedProducts = products.map(product => ({
+//       ...product,
+//       // Ensure consistent benefits and specifications handling
+//       benefits: product.benefitsArray?.length 
+//         ? product.benefitsArray 
+//         : product.benefits 
+//           ? typeof product.benefits === 'string'
+//             ? [product.benefits]
+//             : Array.isArray(product.benefits)
+//               ? product.benefits
+//               : Object.values(product.benefits).flat()
+//           : [],
+//       specifications: product.specificationsArray?.length
+//         ? product.specificationsArray
+//         : product.specifications
+//           ? typeof product.specifications === 'string'
+//             ? [product.specifications]
+//             : Array.isArray(product.specifications)
+//               ? product.specifications
+//               : Object.values(product.specifications).flat()
+//           : [],
+//     }));
+
+//     return NextResponse.json({
+//       products: sanitizedProducts,
+//       pagination: {
+//         currentPage: page,
+//         totalPages: Math.ceil(totalProducts / limit),
+//         totalProducts,
+//         pageSize: limit,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("[PRODUCTS_GET] Unexpected error:", 
+//       error instanceof Error ? error.message : String(error)
+//     );
+//     return new NextResponse(JSON.stringify({ error: 'Internal server error' }), { 
+//       status: 500,
+//       headers: { 'Content-Type': 'application/json' }
+//     });
+//   }
+// }
+
+
 export async function GET(
   req: Request,
   { params }: { params: { storeid: string } }
@@ -445,10 +549,43 @@ export async function GET(
     const search = searchParams.get('search') || '';
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
+    
+    // Extract additional filter parameters
+    const categoryId = searchParams.get('categoryId');
+    const categoryName = searchParams.get('categoryName');
+    const colorId = searchParams.get('colorId');
+    const sizeId = searchParams.get('sizeId');
 
     // Construct dynamic where clause for filtering
-    const whereClause: any = { 
+    const whereClause: Prisma.ProductWhereInput = { 
       storeId: storeid,
+      // Category filtering
+      ...(categoryId ? { 
+        categories: { 
+          some: { categoryId } 
+        } 
+      } : {}),
+      ...(categoryName ? { 
+        categories: { 
+          some: { 
+            category: { 
+              name: categoryName 
+            } 
+          } 
+        } 
+      } : {}),
+      // Color filtering
+      ...(colorId ? { 
+        variants: { 
+          some: { colorId } 
+        } 
+      } : {}),
+      // Size filtering
+      ...(sizeId ? { 
+        variants: { 
+          some: { sizeId } 
+        } 
+      } : {}),
       // Optional search across multiple fields
       ...(search ? {
         OR: [
@@ -457,7 +594,8 @@ export async function GET(
           { benefitsArray: { has: search } },
           { specificationsArray: { has: search } },
         ]
-      } : {})
+      } : {}),
+      isArchived: false
     };
 
     // Construct dynamic order by clause
@@ -465,13 +603,20 @@ export async function GET(
       [sortBy]: sortOrder 
     };
 
+    // Fetch total count for pagination
+    const totalProducts = await prismadb.product.count({ 
+      where: whereClause 
+    });
+
+    // Fetch products with all necessary includes
     const products = await prismadb.product.findMany({
       where: whereClause,
       include: {
         categories: { include: { category: true } },
         variants: { 
           include: { 
-            size: true  // Include full size details for each variant
+            size: true,
+            color: true
           } 
         },
         images: true,
@@ -483,15 +628,9 @@ export async function GET(
       take: limit,
     });
 
-    // Count total products for pagination
-    const totalProducts = await prismadb.product.count({ 
-      where: whereClause 
-    });
-
     // Sanitize and transform products
     const sanitizedProducts = products.map(product => ({
       ...product,
-      // Ensure consistent benefits and specifications handling
       benefits: product.benefitsArray?.length 
         ? product.benefitsArray 
         : product.benefits 

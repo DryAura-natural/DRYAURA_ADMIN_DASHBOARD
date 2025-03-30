@@ -71,6 +71,12 @@ export function MainNav({
       active: pathname === `/${params.storeid}/orders`,
     },
     {
+      href: `/${params.storeid}/subscribers`,
+      label: "Subscribers",
+      icon: <ShoppingCart className="mr-2 h-5 w-5" />,
+      active: pathname === `/${params.storeid}/subscribers`,
+    },
+    {
       href: `/${params.storeid}/settings`,
       label: "Settings",
       icon: <Settings className="mr-2 h-5 w-5" />,

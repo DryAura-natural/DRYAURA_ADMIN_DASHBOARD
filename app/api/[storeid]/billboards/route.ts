@@ -42,7 +42,7 @@ export async function POST(
         description,
         storeId: params.storeid,
         images: {
-          create: images.map((url: string) => ({ url }))
+          create: images.map((url: string) => ({ url: url }))
         }
       },
       include: {

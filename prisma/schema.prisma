@@ -21,28 +21,33 @@ model User {
 }
 
 model Customer {
-  id             String    @id @default(cuid())
-  userId         String    @unique
+  id             String  @id @default(cuid())
+  userId         String  @unique
   name           String
-  email          String    @unique
+  email          String  @unique
   phone          String?
   alternatePhone String?
-  
+
   // Address-related fields
-  streetAddress  String?
-  city           String?
-  state          String?
-  landmark       String?
-  town           String?
-  postalCode     String?
-  country        String?   @default("India")
+  streetAddress String?
+  city          String?
+  state         String?
+  landmark      String?
+  town          String?
+  postalCode    String?
+  country       String? @default("India")
 
   // Metadata fields
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+  contactSubmissions ContactSubmission[] @relation("ContactSubmission")
+  
 
   // Relationships
-  orders         Order[]   @relation("CustomerToOrder")
+  orders Order[] @relation("CustomerToOrder")
+
   // Indexing for performance
   @@index([userId])
   @@index([email])
@@ -50,34 +55,36 @@ model Customer {
 }
 
 model Store {
-  id         String      @id @default(uuid())
-  name       String
-  userId     String
-  user       User        @relation("UserToStore", fields: [userId], references: [id])
-  billboards Billboard[] @relation("StoreToBillboard")
-  categories Category[]  @relation("StoreToCategory")
-  sizes      Size[]      @relation("StoreToSize")
-  colors     Color[]     @relation("StoreToColor")
-  products   Product[]   @relation("StoreToProduct")
-  orders     Order[]     @relation("StoreToOrder")
-  promoCodes PromoCode[] @relation("StoreToPromoCode")
-  badges     Badge[]     @relation("StoreToBadge")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id                 String              @id @default(uuid())
+  name               String
+  userId             String
+  user               User                @relation("UserToStore", fields: [userId], references: [id])
+  billboards         Billboard[]         @relation("StoreToBillboard")
+  categories         Category[]          @relation("StoreToCategory")
+  sizes              Size[]              @relation("StoreToSize")
+  colors             Color[]             @relation("StoreToColor")
+  products           Product[]           @relation("StoreToProduct")
+  orders             Order[]             @relation("StoreToOrder")
+  promoCodes         PromoCode[]         @relation("StoreToPromoCode")
+  badges             Badge[]             @relation("StoreToBadge")
+  contactSubmissions ContactSubmission[] @relation("StoreToContactSubmission")
+  subscribe          Subscribe[]         @relation("StoreToSubscribe")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([userId])
 }
 
 model Billboard {
-  id          String            @id @default(uuid())
+  id          String           @id @default(uuid())
   storeId     String
-  store       Store             @relation("StoreToBillboard", fields: [storeId], references: [id])
+  store       Store            @relation("StoreToBillboard", fields: [storeId], references: [id])
   label       String
   description String
-  images      BillboardImage[]  // One-to-many relationship with BillboardImage
-  categories  Category[]        @relation("BillboardToCategory")
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  images      BillboardImage[] // One-to-many relationship with BillboardImage
+  categories  Category[]       @relation("BillboardToCategory")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([storeId])
 }
@@ -94,21 +101,21 @@ model BillboardImage {
 }
 
 model PromoCode {
-  id        String        @id @default(uuid())
-  code      String        @unique
-  discount  Decimal
-  type      PromoCodeType @default(PERCENTAGE)
-  startDate DateTime
-  endDate   DateTime
-  isActive  Boolean       @default(true)
-  storeId   String
-  store     Store         @relation("StoreToPromoCode", fields: [storeId], references: [id])
-  orders    Order[]
-  maxUses   Int?          @default(0) // Total usage limit (0 = unlimited)
-  maxUsesPerUser Int? @default(0) // Per-user limit (0 = unlimited)
-  usedCount Int      @default(0) // Current usage count
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String        @id @default(uuid())
+  code           String        @unique
+  discount       Decimal
+  type           PromoCodeType @default(PERCENTAGE)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean       @default(true)
+  storeId        String
+  store          Store         @relation("StoreToPromoCode", fields: [storeId], references: [id])
+  orders         Order[]
+  maxUses        Int?          @default(0) // Total usage limit (0 = unlimited)
+  maxUsesPerUser Int?          @default(0) // Per-user limit (0 = unlimited)
+  usedCount      Int           @default(0) // Current usage count
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([storeId])
 }
@@ -142,32 +149,33 @@ model ProductBadge {
 
   @@unique([productId, badgeId])
 }
+
 model Product {
-  id            String               @id @default(uuid())
-  storeId       String
-  store         Store                @relation("StoreToProduct", fields: [storeId], references: [id])
-  categories    CategoryOnProduct[] // Many-to-many relationship with Category
-  name          String
-  description   String?
-  subLabel      String?
+  id                  String               @id @default(uuid())
+  storeId             String
+  store               Store                @relation("StoreToProduct", fields: [storeId], references: [id])
+  categories          CategoryOnProduct[] // Many-to-many relationship with Category
+  name                String
+  description         String?
+  subLabel            String?
   // Update benefits and specifications to be more flexible
-  benefits      Json?                @db.JsonB  // Postgres-optimized JSON type
-  specifications Json?               @db.JsonB  // Postgres-optimized JSON type
+  benefits            Json?                @db.JsonB // Postgres-optimized JSON type
+  specifications      Json?                @db.JsonB // Postgres-optimized JSON type
   // Add optional fields for quick filtering and display
-  benefitsArray String[]             @default([])  // Denormalized array for easy querying
-  specificationsArray String[]       @default([])  // Denormalized array for easy querying
-  isFeatured    Boolean              @default(false)
-  isArchived    Boolean              @default(false)
-  variants      ProductVariant[] // One-to-many relationship with ProductVariant
-  images        Image[]
-  productBanner ProductBannerImage[]
-  badges        ProductBadge[] // Many-to-many relationship with Badge
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  benefitsArray       String[]             @default([]) // Denormalized array for easy querying
+  specificationsArray String[]             @default([]) // Denormalized array for easy querying
+  isFeatured          Boolean              @default(false)
+  isArchived          Boolean              @default(false)
+  variants            ProductVariant[] // One-to-many relationship with ProductVariant
+  images              Image[]
+  productBanner       ProductBannerImage[]
+  badges              ProductBadge[] // Many-to-many relationship with Badge
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@index([storeId])
-  @@index([benefitsArray])  // Add index for faster array searches
-  @@index([specificationsArray])  // Add index for faster array searches
+  @@index([benefitsArray]) // Add index for faster array searches
+  @@index([specificationsArray]) // Add index for faster array searches
 }
 
 model Category {
@@ -265,31 +273,31 @@ model ProductBannerImage {
 }
 
 model Order {
-  id             String    @id @default(cuid())
-  storeId        String
-  store          Store     @relation("StoreToOrder", fields: [storeId], references: [id])
-  customerId     String?
-  customer       Customer? @relation("CustomerToOrder", fields: [customerId], references: [id])
-  orderItems     OrderItem[]
-  promoCodeId    String?
-  promoCode      PromoCode? @relation(fields: [promoCodeId], references: [id])
-  isPaid         Boolean   @default(false)
-  razorpayOrderId String?
-  cashfreeOrderId String?
-  paymentMethod  String?
-  trackingId    String?   @default("")
-  totalAmount    Decimal   @default(0.0)
-  phone          String?
-  alternatePhone String?
-  address        String?
-  orderStatus    OrderStatus @default(PENDING)
-  name           String?
-  email          String?
-  razorpayInvoiceId String?
+  id                 String      @id @default(cuid())
+  storeId            String
+  store              Store       @relation("StoreToOrder", fields: [storeId], references: [id])
+  customerId         String?
+  customer           Customer?   @relation("CustomerToOrder", fields: [customerId], references: [id])
+  orderItems         OrderItem[]
+  promoCodeId        String?
+  promoCode          PromoCode?  @relation(fields: [promoCodeId], references: [id])
+  isPaid             Boolean     @default(false)
+  razorpayOrderId    String?
+  cashfreeOrderId    String?
+  paymentMethod      String?
+  trackingId         String?     @default("")
+  totalAmount        Decimal     @default(0.0)
+  phone              String?
+  alternatePhone     String?
+  address            String?
+  orderStatus        OrderStatus @default(PENDING)
+  name               String?
+  email              String?
+  razorpayInvoiceId  String?
   invoiceGeneratedAt DateTime?
-  invoiceLink    String? 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  invoiceLink        String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([storeId])
   @@index([customerId])
@@ -297,25 +305,101 @@ model Order {
 }
 
 model OrderItem {
-  id            String         @id @default(uuid())
-  orderId       String
-  order         Order          @relation(fields: [orderId], references: [id])
-  variantId     String         
-  variant       ProductVariant @relation(fields: [variantId], references: [id])
-  productId     String        @default("")
-  productName   String          @default("")
-  productImageUrl String?   
-  quantity      Int
-  unitPrice     Decimal        // Price of the item at the time of order
-  totalPrice    Decimal        // Total price for this line item (quantity * unitPrice)
-  discountApplied Decimal?     // Optional discount applied to this item
-  notes         String?        // Optional notes about the order item
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id])
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  productId       String         @default("")
+  productName     String         @default("")
+  productImageUrl String?
+  quantity        Int
+  unitPrice       Decimal // Price of the item at the time of order
+  totalPrice      Decimal // Total price for this line item (quantity * unitPrice)
+  discountApplied Decimal? // Optional discount applied to this item
+  notes           String? // Optional notes about the order item
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([orderId])
   @@index([variantId])
 }
+
+model ContactSubmission {
+  id          String @id @default(uuid())
+  firstName   String
+  lastName    String
+  phoneNumber String
+  email       String
+  message     String @db.Text
+  queryType   String
+
+  bulkOrderDetails  String?
+  customerId        String?
+  statusUpdateReason String? @db.Text
+
+  // Optional fields based on query type
+  orderNumber    String?
+  issueType      String?
+  whatsappNumber String?
+
+  // Metadata
+  source  String                  @default("contact_form")
+  status  ContactSubmissionStatus @default(PENDING)
+  storeId String
+  store   Store                   @relation("StoreToContactSubmission", fields: [storeId], references: [id])
+
+  // Customer Relation
+  customer Customer? @relation("ContactSubmission", fields: [customerId], references: [id])
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+   // Status update tracking
+  statusHistory   StatusUpdate[]
+
+  @@index([storeId])
+  @@index([email])
+  @@index([queryType])
+  @@index([customerId])
+}
+
+model StatusUpdate {
+  id                  String            @id @default(uuid())
+  contactSubmissionId String
+  contactSubmission   ContactSubmission @relation(fields: [contactSubmissionId], references: [id])
+  
+  oldStatus           ContactSubmissionStatus
+  newStatus           ContactSubmissionStatus
+  reason              String?           @db.Text
+  updatedBy           String?           // User who made the update
+  
+  createdAt           DateTime          @default(now())
+  
+  @@index([contactSubmissionId])
+}
+
+model Subscribe {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  storeId   String
+  store     Store   @relation("StoreToSubscribe", fields: [storeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+}
+
+enum ContactSubmissionStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  ESCALATED
+  EMAIL_FAILED
+}
+
 enum PaymentStatus {
   PENDING
   PROCESSING
@@ -331,7 +415,6 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
 }
-
 
 // npx prisma generate
 // npx prisma db push  + npx prisma migrate dev
