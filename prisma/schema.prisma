@@ -164,8 +164,7 @@ model Product {
   // Add optional fields for quick filtering and display
   benefitsArray       String[]             @default([]) // Denormalized array for easy querying
   specificationsArray String[]             @default([]) // Denormalized array for easy querying
-  isFeatured          Boolean              @default(false)
-  isArchived          Boolean              @default(false)
+  isOutOfStock        Boolean              @default(false)
   variants            ProductVariant[] // One-to-many relationship with ProductVariant
   images              Image[]
   productBanner       ProductBannerImage[]

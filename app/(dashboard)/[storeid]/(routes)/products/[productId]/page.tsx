@@ -43,6 +43,7 @@ const ProductPage = async ({
     // Handle null values for optional fields
     description: product.description ?? null,
     subLabel: product.subLabel ?? null,
+    isOutOfStock: product.isOutOfStock ?? false,
     // Transform relations to match expected type
     images: product.images.map(img => ({ url: img.url })),
     variants: product.variants.map(variant => ({
@@ -55,20 +56,26 @@ const ProductPage = async ({
     badges: product.badges.map(b => ({ badgeId: b.badgeId })),
     productBanner: product.productBanner.map(b => ({ url: b.url })),
     // Handle benefits and specifications as arrays
-    benefits: Array.isArray(product.benefits) 
-      ? product.benefits 
-      : typeof product.benefits === 'string'
-        ? [product.benefits]
-        : product.benefits 
-          ? Object.values(product.benefits).flat() 
-          : [],
-    specifications: Array.isArray(product.specifications)
-      ? product.specifications
-      : typeof product.specifications === 'string'
-        ? [product.specifications]
-        : product.specifications
-          ? Object.values(product.specifications).flat()
-          : [],
+    benefits: product.benefitsArray?.length 
+      ? product.benefitsArray 
+      : product.benefits 
+        ? typeof product.benefits === 'string'
+          ? [product.benefits]
+          : Array.isArray(product.benefits)
+            ? product.benefits
+            : Object.values(product.benefits).flat()
+        : [],
+    specifications: product.specificationsArray?.length
+      ? product.specificationsArray
+      : product.specifications
+        ? typeof product.specifications === 'string'
+          ? [product.specifications]
+          : Array.isArray(product.specifications)
+            ? product.specifications
+            : Object.values(product.specifications).flat()
+        : [],
+  
+          
   }) : null;
 
   return (

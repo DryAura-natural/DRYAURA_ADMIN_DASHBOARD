@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch"; // Import Switch component
 import { v4 as uuidv4 } from "uuid";
 
 const formSchema = z.object({
@@ -74,6 +75,7 @@ const formSchema = z.object({
   subLabel: z.string().optional(),
   benefits: z.array(z.string()).optional(),
   specifications: z.array(z.string()).optional(),
+  isOutOfStock: z.boolean().optional(), // Add isOutOfStock field to schema
 });
 
 interface Variant {
@@ -259,6 +261,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             : initialData.specifications
             ? Object.values(initialData.specifications).flat()
             : [],
+          isOutOfStock: initialData.isOutOfStock || false, // Set default value for isOutOfStock
         }
       : {
           name: "",
@@ -279,6 +282,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           productBanners: [],
           benefits: [],
           specifications: [],
+          isOutOfStock: false, // Set default value for isOutOfStock
         },
   });
 
@@ -325,6 +329,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         specifications: data.specifications?.length
           ? data.specifications
           : null,
+        isOutOfStock: data.isOutOfStock, // Add isOutOfStock to payload
         // Provide default pricing if not set
         price: processedVariants.length > 0
           ? Math.min(...processedVariants.map((v) => v.price))
@@ -732,6 +737,31 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       Add multiple specifications by typing and pressing Enter
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Out of Stock Section */}
+
+              <FormField
+                control={form.control}
+                name="isOutOfStock"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Out of Stock
+                      </FormLabel>
+                      <FormDescription>
+                        Mark this product as currently unavailable
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

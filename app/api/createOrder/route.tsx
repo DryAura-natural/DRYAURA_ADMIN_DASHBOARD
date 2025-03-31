@@ -59,44 +59,47 @@ export async function OPTIONS(req: NextRequest) {
   });
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const orderId = searchParams.get("orderId");
+// export async function GET(req: NextRequest) {
+//   try {
+//     const { searchParams } = new URL(req.url);
+//     const orderId = searchParams.get("orderId");
 
-    if (!orderId) {
-      return NextResponse.json(
-        { error: "Missing order ID" },
-        { status: 400, headers: corsHeaders }
-      );
-    }
+//     if (!orderId) {
+//       return NextResponse.json(
+//         { error: "Missing order ID" },
+//         { status: 400, headers: corsHeaders }
+//       );
+//     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { orderItems: true },
-    });
+//     const order = await prisma.order.findUnique({
+//       where: { id: orderId },
+//       include: { orderItems: true },
+//     });
 
-    if (!order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404, headers: corsHeaders }
-      );
-    }
+//     if (!order) {
+//       return NextResponse.json(
+//         { error: "Order not found" },
+//         { status: 404, headers: corsHeaders }
+//       );
+//     }
 
-    return NextResponse.json(
-      { order },
-      { status: 200, headers: corsHeaders }
-    );
-  } catch (error) {
-    console.error("❌ Error fetching order:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch order" },
-      { status: 500, headers: corsHeaders }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
+//     return NextResponse.json(
+//       { order },
+//       { status: 200, headers: corsHeaders }
+//     );
+//   } catch (error) {
+//     console.error("❌ Error fetching order:", error);
+//     return NextResponse.json(
+//       { error: "Failed to fetch order" },
+//       { status: 500, headers: corsHeaders }
+//     );
+//   } finally {
+//     await prisma.$disconnect();
+//   }
+// }
+
+
+
 
 export async function POST(req: NextRequest) {
   console.log("🔍 Order Creation Request Received");

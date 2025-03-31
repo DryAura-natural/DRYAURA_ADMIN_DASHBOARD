@@ -5,6 +5,432 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client";
 
 // POST route for creating a product
+
+
+
+
+// export async function GET(
+//   req: Request,
+//   { params }: { params: { storeid: string } }
+// ) {
+//   try {
+//     const { storeid } = params;
+
+//     // Parse URL query parameters for filtering and pagination
+//     const { searchParams } = new URL(req.url);
+//     const page = parseInt(searchParams.get('page') || '1', 10);
+//     const limit = parseInt(searchParams.get('limit') || '10', 10);
+//     const search = searchParams.get('search') || '';
+//     const sortBy = searchParams.get('sortBy') || 'createdAt';
+//     const sortOrder = searchParams.get('sortOrder') || 'desc';
+    
+//     // Extract additional filter parameters
+//     const categoryId = searchParams.get('categoryId');
+//     const categoryName = searchParams.get('categoryName');
+//     const colorId = searchParams.get('colorId');
+//     const sizeId = searchParams.get('sizeId');
+
+//     // Construct dynamic where clause for filtering
+//     const whereClause: Prisma.ProductWhereInput = { 
+//       storeId: storeid,
+//       // Category filtering
+//       ...(categoryId ? { 
+//         categories: { 
+//           some: { categoryId } 
+//         } 
+//       } : {}),
+//       ...(categoryName ? { 
+//         categories: { 
+//           some: { 
+//             category: { 
+//               name: categoryName 
+//             } 
+//           } 
+//         } 
+//       } : {}),
+//       // Color filtering
+//       ...(colorId ? { 
+//         variants: { 
+//           some: { colorId } 
+//         } 
+//       } : {}),
+//       // Size filtering
+//       ...(sizeId ? { 
+//         variants: { 
+//           some: { sizeId } 
+//         } 
+//       } : {}),
+//       // Optional search across multiple fields
+//       ...(search ? {
+//         OR: [
+//           { name: { contains: search, mode: 'insensitive' } },
+//           { description: { contains: search, mode: 'insensitive' } },
+//           { benefitsArray: { has: search } },
+//           { specificationsArray: { has: search } },
+//         ]
+//       } : {}),
+//       isArchived: false
+//     };
+
+//     // Construct dynamic order by clause
+//     const orderByClause: any = { 
+//       [sortBy]: sortOrder 
+//     };
+
+//     // Fetch total count for pagination
+//     const totalProducts = await prismadb.product.count({ 
+//       where: whereClause 
+//     });
+
+//     // Fetch products with all necessary includes
+//     const products = await prismadb.product.findMany({
+//       where: whereClause,
+//       include: {
+//         categories: { include: { category: true } },
+//         variants: { 
+//           include: { 
+//             size: true,
+//             color: true
+//           } 
+//         },
+//         images: true,
+//         productBanner: true,
+//         badges: { include: { badge: true } },
+//       },
+//       orderBy: orderByClause,
+//       skip: (page - 1) * limit,
+//       take: limit,
+//     });
+
+//     // Sanitize and transform products
+//     const sanitizedProducts = products.map(product => ({
+//       ...product,
+//       benefits: product.benefitsArray?.length 
+//         ? product.benefitsArray 
+//         : product.benefits 
+//           ? typeof product.benefits === 'string'
+//             ? [product.benefits]
+//             : Array.isArray(product.benefits)
+//               ? product.benefits
+//               : Object.values(product.benefits).flat()
+//           : [],
+//       specifications: product.specificationsArray?.length
+//         ? product.specificationsArray
+//         : product.specifications
+//           ? typeof product.specifications === 'string'
+//             ? [product.specifications]
+//             : Array.isArray(product.specifications)
+//               ? product.specifications
+//               : Object.values(product.specifications).flat()
+//           : [],
+//     }));
+
+//     return NextResponse.json({
+//       products: sanitizedProducts,
+//       pagination: {
+//         currentPage: page,
+//         totalPages: Math.ceil(totalProducts / limit),
+//         totalProducts,
+//         pageSize: limit,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("[PRODUCTS_GET] Unexpected error:", 
+//       error instanceof Error ? error.message : String(error)
+//     );
+//     return new NextResponse(JSON.stringify({ error: 'Internal server error' }), { 
+//       status: 500,
+//       headers: { 'Content-Type': 'application/json' }
+//     });
+//   }
+// }
+
+
+import { z } from 'zod';
+
+// Advanced Filter Schema
+const ProductFilterSchema = z.object({
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+  search: z.string().optional(),
+  sortBy: z.enum([
+    'name', 
+    'createdAt', 
+    'price', 
+   
+  ]).optional().default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  
+  // Advanced Filtering Options
+  categories: z.array(z.string()).optional(),
+  badges: z.array(z.string()).optional(),
+  sizes: z.array(z.string()).optional(),
+  colors: z.array(z.string()).optional(),
+  
+  // Price and Variant Filtering
+  priceMin: z.number().optional(),
+  priceMax: z.number().optional(),
+  
+  // Boolean Filters
+
+  isOutOfStock: z.boolean().optional(),
+  
+  // Nutritional and Specification Filters
+  benefits: z.array(z.string()).optional(),
+  specifications: z.array(z.string()).optional()
+});
+
+export async function GET(
+  req: Request,
+  { params }: { params: { storeid: string } }
+) {
+  try {
+    const { searchParams } = new URL(req.url);
+    
+    // Parse and validate query parameters
+    const validatedParams = ProductFilterSchema.parse({
+      page: parseInt(searchParams.get('page') || '1', 10),
+      limit: parseInt(searchParams.get('limit') || '10', 10),
+      search: searchParams.get('search') || undefined,
+      sortBy: searchParams.get('sortBy') || 'createdAt',
+      sortOrder: searchParams.get('sortOrder') || 'desc',
+      
+      // Advanced Filter Parsing
+      categories: searchParams.getAll('categories'),
+      badges: searchParams.getAll('badges'),
+      sizes: searchParams.getAll('sizes'),
+      colors: searchParams.getAll('colors'),
+      
+      priceMin: searchParams.get('priceMin') 
+        ? parseFloat(searchParams.get('priceMin')!) 
+        : undefined,
+      priceMax: searchParams.get('priceMax') 
+        ? parseFloat(searchParams.get('priceMax')!) 
+        : undefined,
+      
+    
+      isOutOfStock: searchParams.get('isOutOfStock') === 'true' ? true : 
+                    searchParams.get('isOutOfStock') === 'false' ? false : undefined,
+      
+      benefits: searchParams.getAll('benefits'),
+      specifications: searchParams.getAll('specifications')
+    });
+
+    const { storeid } = params;
+    const { 
+      page, 
+      limit, 
+      search, 
+      sortBy, 
+      sortOrder,
+      categories,
+      badges,
+      sizes,
+      colors,
+      priceMin,
+      priceMax,
+      isOutOfStock,
+      benefits,
+      specifications
+    } = validatedParams;
+
+    // Construct dynamic where clause for filtering
+    const whereClause: Prisma.ProductWhereInput = { 
+      storeId: storeid,
+      
+      // Category Filtering
+      ...(categories?.length ? { 
+        categories: { 
+          some: { 
+            category: { 
+              name: { in: categories } 
+            } 
+          } 
+        } 
+      } : {}),
+      
+      // Badge Filtering
+      ...(badges?.length ? { 
+        badges: { 
+          some: { 
+            badge: { 
+              label: { in: badges } 
+            } 
+          } 
+        } 
+      } : {}),
+      
+      // Size Filtering
+      ...(sizes?.length ? { 
+        variants: { 
+          some: { 
+            size: { 
+              name: { in: sizes } 
+            } 
+          } 
+        } 
+      } : {}),
+      
+      // Color Filtering
+      ...(colors?.length ? { 
+        variants: { 
+          some: { 
+            color: { 
+              value: { in: colors } 
+            } 
+          } 
+        } 
+      } : {}),
+      
+      // Price Range Filtering
+      ...(priceMin !== undefined && priceMax !== undefined ? { 
+        variants: { 
+          some: { 
+            price: { 
+              gte: priceMin, 
+              lte: priceMax 
+            } 
+          } 
+        } 
+      } : {}),
+      
+      // Boolean Filters
+      
+      
+      
+      // Benefits Filtering
+      ...(benefits?.length ? { 
+        benefitsArray: { 
+          hasSome: benefits 
+        } 
+      } : {}),
+      
+      // Specifications Filtering
+      ...(specifications?.length ? { 
+        specificationsArray: { 
+          hasSome: specifications 
+        } 
+      } : {}),
+      
+      // Global Search
+      ...(search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { benefitsArray: { has: search } },
+          { specificationsArray: { has: search } },
+        ]
+      } : {})
+    };
+
+    // Construct dynamic order by clause
+    const orderByClause: any = { 
+      [sortBy]: sortOrder 
+    };
+
+    // Fetch total count for pagination
+    const totalProducts = await prismadb.product.count({ 
+      where: whereClause 
+    });
+
+    // Fetch products with all necessary includes
+    const products = await prismadb.product.findMany({
+      where: whereClause,
+      include: {
+        categories: { include: { category: true } },
+        variants: { 
+          include: { 
+            size: true,
+            color: true
+          } 
+        },
+        images: true,
+        productBanner: true,
+        badges: { include: { badge: true } },
+      },
+      orderBy: orderByClause,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // Sanitize and transform products
+    const sanitizedProducts = products.map(product => ({
+      ...product,
+      benefits: product.benefitsArray?.length 
+        ? product.benefitsArray 
+        : product.benefits 
+          ? typeof product.benefits === 'string'
+            ? [product.benefits]
+            : Array.isArray(product.benefits)
+              ? product.benefits
+              : Object.values(product.benefits).flat()
+          : [],
+      specifications: product.specificationsArray?.length
+        ? product.specificationsArray
+        : product.specifications
+          ? typeof product.specifications === 'string'
+            ? [product.specifications]
+            : Array.isArray(product.specifications)
+              ? product.specifications
+              : Object.values(product.specifications).flat()
+          : [],
+    }));
+
+    return NextResponse.json({
+      products: sanitizedProducts,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        pageSize: limit,
+      },
+      // Include filter metadata for frontend
+      filterOptions: {
+        categories: await prismadb.category.findMany({ 
+          where: { storeId: storeid },
+          select: { name: true }
+        }),
+        badges: await prismadb.badge.findMany({ 
+          where: { storeId: storeid },
+          select: { label: true }
+        }),
+        sizes: await prismadb.size.findMany({ 
+          where: { storeId: storeid },
+          select: { name: true }
+        }),
+        colors: await prismadb.color.findMany({ 
+          where: { storeId: storeid },
+          select: { value: true }
+        })
+      }
+    });
+  } catch (error) {
+    console.error("[PRODUCTS_GET] Unexpected error:", 
+      error instanceof Error ? error.message : String(error)
+    );
+    
+    // Differentiate between validation and other errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Validation Error', 
+        details: error.errors 
+      }, { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+
+
 export async function POST(
   req: Request,
   { params }: { params: { storeid: string } }
@@ -58,6 +484,7 @@ export async function POST(
       description = "",
       benefits = [],
       specifications = [],
+      isOutOfStock,
     } = body;
 
     // Comprehensive validation
@@ -174,6 +601,21 @@ export async function POST(
       validationErrors
     });
 
+ 
+    // Validate isOutOfStock
+    if (body.isOutOfStock !== undefined && typeof body.isOutOfStock !== 'boolean') {
+      console.error('[PRODUCTS_POST] Invalid isOutOfStock value:', body.isOutOfStock);
+      return new NextResponse('isOutOfStock must be a boolean', { status: 400 });
+    }
+
+ 
+
+    // Validate that product cannot be both out of stock and featured if needed
+    if (body.isOutOfStock === true ) {
+      console.error('[PRODUCTS_POST] Product cannot be both out of stock ');
+      return new NextResponse('Product cannot be both out of stock ', { status: 400 });
+    }
+
     // Return all validation errors
     if (validationErrors.length > 0) {
       console.error('[PRODUCTS_POST] Validation errors:', validationErrors);
@@ -278,6 +720,7 @@ export async function POST(
                   })),
                 },
               },
+              isOutOfStock,
             },
           });
           console.log("[PRODUCTS_POST] Created product:", newProduct);
@@ -425,246 +868,6 @@ export async function POST(
       error: 'Internal server error',
       details: error instanceof Error ? error.message : String(error)
     }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-// GET route for retrieving products
-// export async function GET(
-//   req: Request,
-//   { params }: { params: { storeid: string } }
-// ) {
-//   try {
-//     const { storeid } = params;
-
-//     // Parse URL query parameters for filtering and pagination
-//     const { searchParams } = new URL(req.url);
-//     const page = parseInt(searchParams.get('page') || '1', 10);
-//     const limit = parseInt(searchParams.get('limit') || '10', 10);
-//     const search = searchParams.get('search') || '';
-//     const sortBy = searchParams.get('sortBy') || 'createdAt';
-//     const sortOrder = searchParams.get('sortOrder') || 'desc';
-
-//     // Construct dynamic where clause for filtering
-//     const whereClause: any = { 
-//       storeId: storeid,
-//       // Optional search across multiple fields
-//       ...(search ? {
-//         OR: [
-//           { name: { contains: search, mode: 'insensitive' } },
-//           { description: { contains: search, mode: 'insensitive' } },
-//           { benefitsArray: { has: search } },
-//           { specificationsArray: { has: search } },
-//         ]
-//       } : {})
-//     };
-
-//     // Construct dynamic order by clause
-//     const orderByClause: any = { 
-//       [sortBy]: sortOrder 
-//     };
-
-//     const products = await prismadb.product.findMany({
-//       where: whereClause,
-//       include: {
-//         categories: { include: { category: true } },
-//         variants: { 
-//           include: { 
-//             size: true  // Include full size details for each variant
-//           } 
-//         },
-//         images: true,
-//         productBanner: true,
-//         badges: 
-//         { include: { badge: true } },
-//       },
-//       orderBy: orderByClause,
-//       skip: (page - 1) * limit,
-//       take: limit,
-//     });
-
-//     // Count total products for pagination
-//     const totalProducts = await prismadb.product.count({ 
-//       where: whereClause 
-//     });
-
-//     // Sanitize and transform products
-//     const sanitizedProducts = products.map(product => ({
-//       ...product,
-//       // Ensure consistent benefits and specifications handling
-//       benefits: product.benefitsArray?.length 
-//         ? product.benefitsArray 
-//         : product.benefits 
-//           ? typeof product.benefits === 'string'
-//             ? [product.benefits]
-//             : Array.isArray(product.benefits)
-//               ? product.benefits
-//               : Object.values(product.benefits).flat()
-//           : [],
-//       specifications: product.specificationsArray?.length
-//         ? product.specificationsArray
-//         : product.specifications
-//           ? typeof product.specifications === 'string'
-//             ? [product.specifications]
-//             : Array.isArray(product.specifications)
-//               ? product.specifications
-//               : Object.values(product.specifications).flat()
-//           : [],
-//     }));
-
-//     return NextResponse.json({
-//       products: sanitizedProducts,
-//       pagination: {
-//         currentPage: page,
-//         totalPages: Math.ceil(totalProducts / limit),
-//         totalProducts,
-//         pageSize: limit,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("[PRODUCTS_GET] Unexpected error:", 
-//       error instanceof Error ? error.message : String(error)
-//     );
-//     return new NextResponse(JSON.stringify({ error: 'Internal server error' }), { 
-//       status: 500,
-//       headers: { 'Content-Type': 'application/json' }
-//     });
-//   }
-// }
-
-
-export async function GET(
-  req: Request,
-  { params }: { params: { storeid: string } }
-) {
-  try {
-    const { storeid } = params;
-
-    // Parse URL query parameters for filtering and pagination
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const search = searchParams.get('search') || '';
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
-    
-    // Extract additional filter parameters
-    const categoryId = searchParams.get('categoryId');
-    const categoryName = searchParams.get('categoryName');
-    const colorId = searchParams.get('colorId');
-    const sizeId = searchParams.get('sizeId');
-
-    // Construct dynamic where clause for filtering
-    const whereClause: Prisma.ProductWhereInput = { 
-      storeId: storeid,
-      // Category filtering
-      ...(categoryId ? { 
-        categories: { 
-          some: { categoryId } 
-        } 
-      } : {}),
-      ...(categoryName ? { 
-        categories: { 
-          some: { 
-            category: { 
-              name: categoryName 
-            } 
-          } 
-        } 
-      } : {}),
-      // Color filtering
-      ...(colorId ? { 
-        variants: { 
-          some: { colorId } 
-        } 
-      } : {}),
-      // Size filtering
-      ...(sizeId ? { 
-        variants: { 
-          some: { sizeId } 
-        } 
-      } : {}),
-      // Optional search across multiple fields
-      ...(search ? {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-          { benefitsArray: { has: search } },
-          { specificationsArray: { has: search } },
-        ]
-      } : {}),
-      isArchived: false
-    };
-
-    // Construct dynamic order by clause
-    const orderByClause: any = { 
-      [sortBy]: sortOrder 
-    };
-
-    // Fetch total count for pagination
-    const totalProducts = await prismadb.product.count({ 
-      where: whereClause 
-    });
-
-    // Fetch products with all necessary includes
-    const products = await prismadb.product.findMany({
-      where: whereClause,
-      include: {
-        categories: { include: { category: true } },
-        variants: { 
-          include: { 
-            size: true,
-            color: true
-          } 
-        },
-        images: true,
-        productBanner: true,
-        badges: { include: { badge: true } },
-      },
-      orderBy: orderByClause,
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-
-    // Sanitize and transform products
-    const sanitizedProducts = products.map(product => ({
-      ...product,
-      benefits: product.benefitsArray?.length 
-        ? product.benefitsArray 
-        : product.benefits 
-          ? typeof product.benefits === 'string'
-            ? [product.benefits]
-            : Array.isArray(product.benefits)
-              ? product.benefits
-              : Object.values(product.benefits).flat()
-          : [],
-      specifications: product.specificationsArray?.length
-        ? product.specificationsArray
-        : product.specifications
-          ? typeof product.specifications === 'string'
-            ? [product.specifications]
-            : Array.isArray(product.specifications)
-              ? product.specifications
-              : Object.values(product.specifications).flat()
-          : [],
-    }));
-
-    return NextResponse.json({
-      products: sanitizedProducts,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalProducts / limit),
-        totalProducts,
-        pageSize: limit,
-      },
-    });
-  } catch (error) {
-    console.error("[PRODUCTS_GET] Unexpected error:", 
-      error instanceof Error ? error.message : String(error)
-    );
-    return new NextResponse(JSON.stringify({ error: 'Internal server error' }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

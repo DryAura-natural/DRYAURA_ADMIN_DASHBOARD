@@ -34,6 +34,10 @@ const ProductsPage = async ({ params }: { params: { storeid: string } }) => {
   });
 
   const formattedProducts: ProductsColumn[] = products.map((product) => {
+    // Add sortDate
+    const sortDate = product.createdAt instanceof Date 
+    ? product.createdAt 
+    : new Date(product.createdAt);
     // Get all unique sizes from variants
     const sizes = Array.from(new Set(
       product.variants.map(variant => variant.size.name)
@@ -77,6 +81,7 @@ const ProductsPage = async ({ params }: { params: { storeid: string } }) => {
             ? Object.values(product.specifications).flat()
             : []);
 
+
     return {
       id: product.id,
       name: product.name,
@@ -86,8 +91,7 @@ const ProductsPage = async ({ params }: { params: { storeid: string } }) => {
       categories: product.categories.map(c => c.category.name),
       badges: product.badges.map(b => b.badge.label),
       colors,
-      isFeatured: product.isFeatured,
-      isArchived: product.isArchived,
+      isStock: product.isOutOfStock,
       createdAt: isValid(product.createdAt)
         ? format(product.createdAt, "MMM do yyyy")
         : "Invalid date",
@@ -98,16 +102,61 @@ const ProductsPage = async ({ params }: { params: { storeid: string } }) => {
       variantsCount: product.variants.length,
       benefits,
       specifications,
-    };
+      sortDate: sortDate,
+    } as ProductsColumn; // Explicit type assertion
   });
 
-  return (
-    <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8   pt-6">
-        <ProductsClient data={formattedProducts} />
-      </div>
+  // In page.tsx
+return (
+  <div className="flex-col">
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <ProductsClient 
+        data={formattedProducts} 
+        filterOptions={{
+          categories: Array.from(new Set(
+            products.flatMap(p => p.categories.map(c => c.category.name))
+          )),
+          badges: Array.from(new Set(
+            products.flatMap(p => p.badges.map(b => b.badge.label))
+          )),
+          sizes: Array.from(new Set(
+            products.flatMap(p => p.variants.map(v => v.size.name))
+          )),
+          colors: Array.from(new Set(
+            products.flatMap(p => 
+              p.variants
+                .filter(v => v.color)
+                .map(v => v.color!.value)
+            )
+          )),
+          benefits: Array.from(new Set(
+            products.flatMap(p => 
+              typeof p.benefits === 'string' 
+                ? [p.benefits] 
+                : Array.isArray(p.benefits) 
+                  ? p.benefits 
+                  : p.benefits 
+                    ? Object.values(p.benefits).flat() 
+                    : []
+            )
+          )),
+          specifications: Array.from(new Set(
+            products.flatMap(p => 
+              typeof p.specifications === 'string'
+                ? [p.specifications]
+                : Array.isArray(p.specifications)
+                  ? p.specifications
+                  : p.specifications
+                    ? Object.values(p.specifications).flat()
+                    : []
+            )
+          )),
+             isStock: [true, false]
+        }}
+      />
     </div>
-  );
+  </div>
+);
 };
 
 export default ProductsPage;
