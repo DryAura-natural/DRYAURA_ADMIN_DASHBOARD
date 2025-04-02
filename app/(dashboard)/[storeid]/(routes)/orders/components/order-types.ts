@@ -3,8 +3,10 @@ export type Product = {
   name: string;
   quantity: number;
   size?: string;
+  color?: string;
   unitPrice: number;
   totalPrice: number;
+  variantId?: string;
 };
 
 export type OrderStatus = 
@@ -12,7 +14,9 @@ export type OrderStatus =
   | 'PROCESSING' 
   | 'SHIPPED' 
   | 'DELIVERED' 
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'PARTIALLY_SHIPPED';
 
 export type Customer = {
   id: string;
@@ -21,7 +25,18 @@ export type Customer = {
   phone: string;
   alternativePhone?: string;
   address: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
 };
+
+export interface OrderFilterOptions {
+  statusFilters: {
+    label: string;
+    value: OrderStatus;
+  }[];
+}
 
 export type OrderColumn = {
   id: string;
@@ -33,6 +48,7 @@ export type OrderColumn = {
   createdAt: string;
   updatedAt: string;
   storeId: string;
+  orderNumber: string;
 
   // Convenience getters for backwards compatibility
   name: string;
@@ -41,9 +57,10 @@ export type OrderColumn = {
   alternativePhone?: string;
   address: string;
 };
+
 export function createOrderColumn(data: Partial<OrderColumn>): OrderColumn {
   return {
-    id: data.id || '',
+    id: data.id || crypto.randomUUID(),
     customer: data.customer || {
       id: '',
       name: '',
@@ -58,6 +75,7 @@ export function createOrderColumn(data: Partial<OrderColumn>): OrderColumn {
     createdAt: data.createdAt || new Date().toISOString(),
     updatedAt: data.updatedAt || new Date().toISOString(),
     storeId: data.storeId || '',
+    orderNumber: data.orderNumber || `ORD-${Date.now()}`,
 
     // Convenience getters
     name: data.customer?.name || data.name || '',
@@ -65,5 +83,18 @@ export function createOrderColumn(data: Partial<OrderColumn>): OrderColumn {
     phone: data.customer?.phone || data.phone || '',
     alternativePhone: data.customer?.alternativePhone || data.alternativePhone,
     address: data.customer?.address || data.address || ''
+  };
+}
+
+// Helper function to generate default filter options
+export function getDefaultOrderFilterOptions(): OrderFilterOptions {
+  return {
+    statusFilters: [
+      { label: 'Pending', value: 'PENDING' },
+      { label: 'Processing', value: 'PROCESSING' },
+      { label: 'Shipped', value: 'SHIPPED' },
+      { label: 'Delivered', value: 'DELIVERED' },
+      { label: 'Cancelled', value: 'CANCELLED' }
+    ]
   };
 }

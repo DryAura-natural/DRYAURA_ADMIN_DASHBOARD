@@ -93,9 +93,9 @@ export const CellAction: React.FC<CellActionProps> = ({
         <DropdownMenuItem 
           onClick={() => router.push(`/${params.storeid}/orders/${data.id}`)}
         >
-          <Edit className="mr-2 h-4 w-4" /> View Details
+          <Edit className="mr-2 h-4 w-4" /> View And Update Details
         </DropdownMenuItem>
-        <DropdownMenuItem 
+        {/* <DropdownMenuItem 
           onClick={() => onUpdateStatus(data.status)}
           disabled={loading}
         >
@@ -107,7 +107,7 @@ export const CellAction: React.FC<CellActionProps> = ({
           >
             {data.status}
           </Badge>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

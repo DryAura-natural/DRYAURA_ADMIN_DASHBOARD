@@ -3,6 +3,7 @@ import prismadb from "@/lib/prismadb";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/actions/get-current-user";
+import { Toaster } from "@/components/ui/toaster"
 
 export default async function DashboardLayout({
   children,
@@ -37,6 +38,7 @@ export default async function DashboardLayout({
   return (
     <div>
       <Navbar />
+      <Toaster />
       {children}
     </div>
   );
