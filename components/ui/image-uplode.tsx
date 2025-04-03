@@ -36,14 +36,41 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, disabled, onChange, on
 
     setUploading(true);
     try {
+      // Log file details for debugging
+      console.log('Uploading file:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        folderId: folderId
+      });
+
       const response = await storage.createFile(folderId, ID.unique(), file);
       const uploadedUrl = `https://cloud.appwrite.io/v1/storage/buckets/${folderId}/files/${response.$id}/view?project=67a96cd2001e32766970`;
 
+      console.log('File upload successful:', uploadedUrl);
       onChange(uploadedUrl); // Update with uploaded URL
     } catch (error) {
-      console.error("Upload failed:", error);
-      onRemove(localUrl); // Remove the preview if upload fails
+      console.error('File upload error:', error);
+      
+      // More detailed error handling
+      if (error instanceof Error) {
+        let errorMessage = 'Upload failed';
+        
+        // Check for specific CORS or network-related errors
+        if (error.message.includes('CORS')) {
+          errorMessage = 'CORS configuration error. Please contact support.';
+        } else if (error.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+
+        // Optional: Show error to user or trigger error state
+        alert(errorMessage);
+      }
+
+      // Revert to local URL or clear upload
+      setUploading(false);
     } finally {
+      // Ensure uploading state is reset
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
     }
