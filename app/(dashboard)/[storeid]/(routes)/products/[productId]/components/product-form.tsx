@@ -796,7 +796,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                           <SelectContent>
                             {sizes.map((size) => (
                               <SelectItem key={size.id} value={size.id}>
-                                {size.name}
+                                {size.value}
                               </SelectItem>
                             ))}
                           </SelectContent>
