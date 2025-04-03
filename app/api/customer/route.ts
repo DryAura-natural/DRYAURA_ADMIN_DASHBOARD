@@ -263,22 +263,97 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
 
+    console.log(`Received GET request for userId: ${userId}`);
+
     if (!userId) {
-      return new Response(JSON.stringify({ message: "Missing userId" }), { status: 400, headers });
+      console.warn('GET request: Missing userId');
+      return new Response(JSON.stringify({ 
+        message: "Missing userId", 
+        details: "No user ID provided in the request" 
+      }), { status: 400, headers });
     }
+
+    // Additional logging to track database query
+    console.log(`Attempting to find customer with userId: ${userId}`);
+
+    // Fetch all customers to help diagnose potential issues
+    const allCustomers = await prisma.customer.findMany({
+      select: { 
+        userId: true, 
+        name: true, 
+        email: true 
+      }
+    });
+
+    console.log('Existing customers:', JSON.stringify(allCustomers, null, 2));
 
     const customer = await prisma.customer.findUnique({
       where: { userId },
+      // Include more fields for comprehensive debugging
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        email: true,
+        phone: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        postalCode: true
+      }
     });
 
     if (!customer) {
-      return new Response(JSON.stringify({ message: "Customer not found" }), { status: 404, headers });
+      console.warn(`No customer found for userId: ${userId}`);
+      
+      // Attempt to find similar matches
+      const similarCustomers = await prisma.customer.findMany({
+        where: {
+          OR: [
+            { email: { contains: userId } },
+            { name: { contains: userId } }
+          ]
+        },
+        select: { 
+          userId: true, 
+          name: true, 
+          email: true 
+        }
+      });
+
+      return new Response(JSON.stringify({ 
+        message: "Customer not found", 
+        details: {
+          searchedUserId: userId,
+          similarCustomers: similarCustomers
+        }
+      }), { status: 404, headers });
     }
 
-    return new Response(JSON.stringify(customer), { status: 200, headers });
+    console.log(`Customer found: ${JSON.stringify(customer)}`);
+
+    return new Response(JSON.stringify(customer), { 
+      status: 200, 
+      headers 
+    });
 
   } catch (error) {
-    console.error("Error in GET:", error);
+    // Comprehensive error logging
+    console.error("Detailed Error in GET Customer:", {
+      errorName: error instanceof Error ? error.name : 'Unknown Error',
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+
+    // Prisma-specific error handling
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return new Response(JSON.stringify({ 
+        message: "Database query error", 
+        errorCode: error.code,
+        errorDetails: error.message
+      }), { status: 500, headers });
+    }
+
     return new Response(JSON.stringify({ 
       message: "Failed to fetch customer data", 
       error: error instanceof Error ? error.message : String(error)
