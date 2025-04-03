@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -257,6 +258,23 @@ export async function PATCH(req: Request) {
   }
 }
 
+// Define customer schema for validation
+const customerSchema = z.object({
+  id: z.number(),
+  userId: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  alternatePhone: z.string().optional(),
+  streetAddress: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  landmark: z.string().optional(),
+  town: z.string().optional()
+});
+
 // GET Customer Data (Fetch by userId)
 export async function GET(req: Request) {
   try {
@@ -273,69 +291,71 @@ export async function GET(req: Request) {
       }), { status: 400, headers });
     }
 
-    // Additional logging to track database query
-    console.log(`Attempting to find customer with userId: ${userId}`);
-
-    // Fetch all customers to help diagnose potential issues
-    const allCustomers = await prisma.customer.findMany({
-      select: { 
-        userId: true, 
-        name: true, 
-        email: true 
-      }
-    });
-
-    console.log('Existing customers:', JSON.stringify(allCustomers, null, 2));
-
+    // Fetch customer with ALL possible fields
     const customer = await prisma.customer.findUnique({
       where: { userId },
-      // Include more fields for comprehensive debugging
       select: {
         id: true,
         userId: true,
         name: true,
         email: true,
         phone: true,
+        alternatePhone: true,
         streetAddress: true,
         city: true,
         state: true,
-        postalCode: true
+        postalCode: true,
+        country: true,
+        landmark: true,
+        town: true
       }
     });
 
     if (!customer) {
       console.warn(`No customer found for userId: ${userId}`);
       
-      // Attempt to find similar matches
-      const similarCustomers = await prisma.customer.findMany({
-        where: {
-          OR: [
-            { email: { contains: userId } },
-            { name: { contains: userId } }
-          ]
-        },
-        select: { 
-          userId: true, 
-          name: true, 
-          email: true 
-        }
-      });
-
       return new Response(JSON.stringify({ 
         message: "Customer not found", 
-        details: {
-          searchedUserId: userId,
-          similarCustomers: similarCustomers
-        }
+        details: { searchedUserId: userId }
       }), { status: 404, headers });
     }
 
-    console.log(`Customer found: ${JSON.stringify(customer)}`);
+    // Enhance logging with full customer details
+    console.log(`Customer found: ${JSON.stringify(customer, null, 2)}`);
 
-    return new Response(JSON.stringify(customer), { 
-      status: 200, 
-      headers 
-    });
+    // Validate customer data against schema before returning
+    try {
+      // Use partial validation to allow optional fields
+      const validatedCustomer = customerSchema.partial().parse(customer);
+      
+      return new Response(JSON.stringify(validatedCustomer), { 
+        status: 200, 
+        headers: {
+          ...headers,
+          'X-Validation-Status': 'Passed'
+        }
+      });
+    } catch (validationError) {
+      // Log detailed validation errors
+      console.error('Customer Data Validation Failed:', {
+        rawData: customer,
+        validationErrors: validationError instanceof z.ZodError 
+          ? validationError.errors 
+          : 'Unknown validation error'
+      });
+
+      // Return partial data with validation warning
+      return new Response(JSON.stringify({
+        ...customer,
+        _validationWarning: 'Some fields did not pass validation'
+      }), { 
+        status: 206, // Partial Content
+        headers: {
+          ...headers,
+          'X-Validation-Status': 'Partial'
+        }
+      });
+    }
 
   } catch (error) {
     // Comprehensive error logging
