@@ -40,7 +40,9 @@ export async function GET(
 
     // Add CORS headers
     const headers = {
-      'Access-Control-Allow-Origin': '*', // Or specify your exact origin
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*', // Or specify your exact origin
       'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
@@ -77,7 +79,9 @@ export async function GET(
     return new NextResponse("Internal error", { 
       status: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+       'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*'
       }
     });
   }

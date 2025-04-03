@@ -6,7 +6,9 @@ const prisma = new PrismaClient();
 
 // Define CORS headers with comprehensive support
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+ 'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*',
   "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
   "Access-Control-Max-Age": "86400",

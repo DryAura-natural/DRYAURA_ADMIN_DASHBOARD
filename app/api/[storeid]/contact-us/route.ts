@@ -20,7 +20,9 @@ const corsHeaders = (origin?: string | null) => {
   );
 
   return {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin || '*' : '*',
+   'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS, POST',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',

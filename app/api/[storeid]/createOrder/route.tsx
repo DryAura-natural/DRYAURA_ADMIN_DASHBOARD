@@ -14,15 +14,20 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Define CORS headers with comprehensive support
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
-  "Access-Control-Max-Age": "86400",
-  "Access-Control-Allow-Credentials": "true",
-  "Vary": "Origin"
-};
+// Robust CORS headers generation function
+function getCorsHeaders(origin?: string | null): Record<string, string> {
+  const allowedOrigin = origin || process.env.NEXT_PUBLIC_FRONTEND_URL || "*";
+  return {
+   'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*',
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Origin"
+  };
+}
 
 // Define an interface for the request body to ensure type safety
 interface OrderRequestBody {
@@ -44,12 +49,9 @@ interface OrderRequestBody {
 
 // Handle preflight requests
 export async function OPTIONS(req: NextRequest) {
-  const requestOrigin = req.headers.get('origin') || corsHeaders["Access-Control-Allow-Origin"];
+  const requestOrigin = req.headers.get('origin');
   return NextResponse.json({}, {
-    headers: {
-      ...corsHeaders,
-      "Access-Control-Allow-Origin": requestOrigin
-    },
+    headers: getCorsHeaders(requestOrigin),
     status: 200
   });
 }
@@ -58,11 +60,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const orderId = searchParams.get("orderId");
+    const requestOrigin = req.headers.get('origin');
 
     if (!orderId) {
       return NextResponse.json(
         { error: "Missing order ID" },
-        { status: 400, headers: corsHeaders }
+        { 
+          status: 400, 
+          headers: getCorsHeaders(requestOrigin)
+        }
       );
     }
 
@@ -74,19 +80,28 @@ export async function GET(req: NextRequest) {
     if (!order) {
       return NextResponse.json(
         { error: "Order not found" },
-        { status: 404, headers: corsHeaders }
+        { 
+          status: 404, 
+          headers: getCorsHeaders(requestOrigin)
+        }
       );
     }
 
     return NextResponse.json(
       { order },
-      { status: 200, headers: corsHeaders }
+      { 
+        headers: getCorsHeaders(requestOrigin)
+      }
     );
   } catch (error) {
     console.error("❌ Error fetching order:", error);
+    const requestOrigin = req.headers.get('origin');
     return NextResponse.json(
-      { error: "Failed to fetch order" },
-      { status: 500, headers: corsHeaders }
+      { error: "Internal Server Error" },
+      { 
+        status: 500, 
+        headers: getCorsHeaders(requestOrigin)
+      }
     );
   } finally {
     await prisma.$disconnect();
@@ -151,9 +166,10 @@ export async function POST(req: NextRequest) {
 
     if (validationErrors.length > 0) {
       console.error("❌ Validation Failed:", validationErrors);
+      const requestOrigin = req.headers.get('origin');
       return NextResponse.json(
         { error: "Validation Failed", details: validationErrors },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: getCorsHeaders(requestOrigin) }
       );
     }
 
@@ -164,9 +180,10 @@ export async function POST(req: NextRequest) {
 
     if (!store) {
       console.error(`❌ Store Not Found: No store found with ID: ${requestBody.storeId}`);
+      const requestOrigin = req.headers.get('origin');
       return NextResponse.json(
         { error: "Store Not Found", details: `No store found with ID: ${requestBody.storeId}` },
-        { status: 404, headers: corsHeaders }
+        { status: 404, headers: getCorsHeaders(requestOrigin) }
       );
     }
 
@@ -177,9 +194,10 @@ export async function POST(req: NextRequest) {
 
     if (!customer) {
       console.error(`❌ Customer Not Found: No customer found with User ID: ${requestBody.customerId}`);
+      const requestOrigin = req.headers.get('origin');
       return NextResponse.json(
         { error: "Customer Not Found", details: `No customer found with User ID: ${requestBody.customerId}` },
-        { status: 404, headers: corsHeaders }
+        { status: 404, headers: getCorsHeaders(requestOrigin) }
       );
     }
 
@@ -228,6 +246,7 @@ export async function POST(req: NextRequest) {
 
     if (productVariantErrors.length > 0) {
       console.error("❌ Product Variant Validation Failed:", productVariantErrors);
+      const requestOrigin = req.headers.get('origin');
       return NextResponse.json(
         { 
           error: "Product Variant Validation Failed", 
@@ -240,7 +259,7 @@ export async function POST(req: NextRequest) {
             }))
           }
         },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: getCorsHeaders(requestOrigin) }
       );
     }
 
@@ -263,9 +282,10 @@ export async function POST(req: NextRequest) {
       console.log("✅ Razorpay Order Created Successfully:", razorpayOrder.id);
     } catch (razorpayError: any) {
       console.error("❌ Razorpay Order Creation Error:", razorpayError);
+      const requestOrigin = req.headers.get('origin');
       return NextResponse.json(
         { error: "Payment Gateway Error", details: razorpayError.message || "Failed to create Razorpay order" },
-        { status: 500, headers: corsHeaders }
+        { status: 500, headers: getCorsHeaders(requestOrigin) }
       );
     }
 
@@ -295,6 +315,7 @@ export async function POST(req: NextRequest) {
     });
     console.log("✅ Order Created Successfully:", newOrder.id);
 
+    const requestOrigin = req.headers.get('origin');
     return NextResponse.json(
       { 
         message: "Order created successfully", 
@@ -311,15 +332,16 @@ export async function POST(req: NextRequest) {
       },
       { 
         status: 201, 
-        headers: corsHeaders 
+        headers: getCorsHeaders(requestOrigin) 
       }
     );
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
     console.error("❌ Order Creation Error:", errorMessage);
+    const requestOrigin = req.headers.get('origin');
     return NextResponse.json(
       { error: "Order Creation Failed", details: errorMessage },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: getCorsHeaders(requestOrigin) }
     );
   } finally {
     await prisma.$disconnect();

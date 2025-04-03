@@ -4,7 +4,9 @@ const prisma = new PrismaClient();
 
 const headers = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "*", 
+  'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*',
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, PATCH",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

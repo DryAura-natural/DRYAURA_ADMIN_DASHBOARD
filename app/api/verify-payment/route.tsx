@@ -8,7 +8,9 @@ const prisma = new PrismaClient();
 
 // CORS headers
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*', 
+ 'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_FRONTEND_URL 
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL).origin 
+  : '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
