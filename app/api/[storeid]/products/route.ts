@@ -48,8 +48,8 @@ export async function GET(
     
     // Parse and validate query parameters
     const validatedParams = ProductFilterSchema.parse({
-      page: parseInt(searchParams.get('page') || '1', 10),
-      limit: parseInt(searchParams.get('limit') || '10', 10),
+      page: parseInt(searchParams.get('page') || '1', 20),
+      limit: parseInt(searchParams.get('limit') || '20', 20),
       search: searchParams.get('search') || undefined,
       sortBy: searchParams.get('sortBy') || 'createdAt',
       sortOrder: searchParams.get('sortOrder') || 'desc',
